@@ -1,161 +1,101 @@
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "list.h"
 
-/**
- * This file contains the implementation of linked list functions
- * defined in linked_list.h.
- */
-
-
-/**
- * Append a node to the linked list.
- */
-int list_appendNode(struct linked_list* list, struct node* node)
-{
-    if (list == NULL)
-    {
-        // the list is invalid
-        return E_INVALID_LIST;
-    }
-    
-    if (node == NULL)
-    {
-        // the node is invalid
-        return E_INVALID_NODE;
-    }
-
-    node->next = NULL;
-
-    if (list->head == NULL)
-    {
-        // an empty list; insert at the head of the list
-        list->head = node;
-        list->tail = node;
-        list->length = 1;
-    }
-    else
-    {
-        list->tail->next = node;
-        list->tail = node;
-        list->length ++;
-    }
-
-    return list->length;
+struct linked_list* list_init(struct linked_list* list, void (*destroy)(void* data)) {
+  if (list) {
+    list->size = 0;
+    list->destroy = destroy;
+    list->head = NULL;
+    list->tail = NULL;
+  }
+  return list;
 }
 
-/**
- * Delete the linked list.
- */
-void list_free(struct linked_list* list)
-{
-    if (list != NULL)
-    {
-        struct node* node = list->head;
-        struct node* temp = NULL;
-
-        while (node != NULL)
-        {
-            temp = node;
-            node = node->next;
-            free(temp);
-        }
-
-        free(list);
+int list_destroy(struct linked_list* list) {
+  if (list == NULL) 
+    return -1;
+  void* data;
+  while (list_size(list) > 0) {
+    if (list_rem_next(list, NULL, (void **)&data) == 0 && list->destroy != NULL) {
+      list->destroy(data);
     }
+  }
+
+  memset(list, 0, sizeof(struct linked_list));
+  return 0;
 }
 
-/**
- * Return the data at the specified index in the linked list.
- */
-int* list_getData(struct linked_list* list, int index)
-{
-    if ( list_isEmpty(list) || (index < 0 || index >= list_length(list)) )
-    {
-        // the list is either empty or the index is out of range
-        return NULL;
-    }
+int list_push_back(struct linked_list* list, const void* data) {
+  return list_ins_next(list, list->tail, data);
+}
+ 
+int list_ins_next(struct linked_list* list, struct node* node, const void* data) {
+  if (list == NULL)
+    return -1;
+  struct node* new_node;
+  if ((new_node = (struct node*)malloc(sizeof(struct node))) == NULL)
+    return -1;
 
-    struct node* node = list->head;
-    int count = 0;
+  new_node->data = (void*)data;
+  if (node == NULL) {
+    if (list_size(list) == 0)
+      list->tail = new_node;
 
-    while (count < index)
-    {
-        node = node->next;
-        count++;
-    }
+    new_node->next = list->head;
+    list->head = new_node;
+  } else {
+    if (node->next == NULL)
+      list->tail = new_node;
 
-    return &(node->data);
+    new_node->next = node->next;
+    node->next = new_node;
+  }
+
+  list->size++;
+  return 0;
 }
 
-/**
- * Initialize a linked list.
- */
-struct linked_list* list_init()
-{
-    struct linked_list* list = (struct linked_list*)malloc(sizeof(struct linked_list));
-    if (list) {
-        list->head = NULL;
-        list->tail = NULL;
-        list->length = 0;
-    }
+int list_rem_next(struct linked_list* list, struct node* element, void** data) {
+  if (list == NULL)
+    return -1;
+  struct node* old_element;
+  if (list_size(list) == 0)
+    return -1;
 
-    return list;
+  if (element == NULL) {
+    *data = list->head->data;
+    old_element = list->head;
+    list->head = list->head->next;
+
+    if (list_size(list) == 1)
+      list->tail = NULL;
+  } else {
+    if (element->next == NULL)
+      return -1;
+    *data = element->next->data;
+    old_element = element->next;
+    element->next = element->next->next;
+
+    if (element->next == NULL)
+      list->tail = element;
+  }
+
+  free(old_element);
+
+  list->size --;
+
+  return 0;
 }
 
-/**
- * Returns TRUE if the linked list is empty.
- */
-bool list_isEmpty(struct linked_list* list)
-{
-    return ( (list == NULL) || (list->head == NULL) );
-}
 
-/**
- * Returns the length of the linked list.
- */
-int list_length(struct linked_list* list)
-{
-    return list ? list->length : -1;
-}
-
-/**
- * Allocate a node with the specified data.
- */
-struct node* list_mallocNode(int data)
-{
-    struct node* node = (struct node*)malloc(sizeof(struct node));
-
-    if (node == NULL)
-    {
-        printf("Error allocating memory for node.  Exiting.\n");
-        exit(-1);
-    }
-
-    node->data = data;
-    node->next = NULL;
-
-    return node;
-}
-
-/**
- * Print a linked list.
- */
-void list_print(struct linked_list* list)
-{
-    //printf("[");
-
-    if (list != NULL)
-    {
-        struct node* node = list->head;
-
-        while (node != NULL)
-        {
-            //printf(" %d", node->data);
-            node = node->next;
-        }
-    }
-
-    //printf(" ]\n");
+int list_for_each(struct linked_list* list, void (*callback)(void* data)) {
+  if (list == NULL || callback == NULL)
+    return -1;
+  void* data;
+  struct node* node = list_head(list);
+  while (node) {
+    callback(list_data(node));
+    node = list_next(node);
+  }
 }

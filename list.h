@@ -1,42 +1,53 @@
-#include <stdbool.h>
+/******************************************************************************
+ *
+ *  -------------------------- list.h --------------------------------------- *
+ *
+ *****************************************************************************/
 
-#define E_NO_ERROR       0
-#define E_INVALID_LIST     -1
-#define E_INVALID_NODE     -2
-#define E_OUT_OF_RANGE -10
+#ifndef LIST_H
+#define LIST_H
 
-/**
- * Represents one node in the linked list.
- */
+#include <stdlib.h>
+
 struct node
 {
-    int data;           // data held by node
+    void* data;           // data held by node
     struct node* next;  // pointer to the next node
 };
 
-/**
- * Represents a linked list data structure.
- */
 struct linked_list
 {
     struct node* head;  // pointer to the head node
     struct node* tail;  // pointer to the head node
-    int length;
+    int size;
+    int (*match)(const void* key1, const void* key2);
+    void (*destroy)(void* data);
 };
 
-/**
- * Function prototypes
- */
-int list_appendList(struct linked_list* list1, struct linked_list* list2);
-int list_appendNode(struct linked_list* list, struct node* node);
-struct linked_list* list_copy(struct linked_list* list);
-void list_free(struct linked_list* list);
-int* list_getData(struct linked_list* list, int index);
-struct linked_list* list_init();
-int list_insertNode(struct linked_list* list, struct node* node, int index);
-bool list_isEmpty(struct linked_list* list);
-int list_length(struct linked_list* list);
-struct node* list_mallocNode(int data);
-void list_print(struct linked_list* list);
-struct node* list_removeNode(struct linked_list* list, int index);
-void list_reverse(struct linked_list* list);
+struct linked_list* list_init(struct linked_list* list, void (*destroy)(void* data));
+
+int list_destroy(struct linked_list* list);
+
+int list_ins_next(struct linked_list* list, struct node* node, const void* data);
+
+int list_push_back(struct linked_list* list, const void* data);
+
+int list_rem_next(struct linked_list* list, struct node* node, void** data);
+
+int list_for_each(struct linked_list* list, void (*callback)(void* data));
+
+#define list_size(list) ((list)->size)
+
+#define list_head(list) ((list)->head)
+
+#define list_tail(list) ((list)->tail)
+
+#define list_is_head(list, node) ((node) == (list)->node ? 1 : 0)
+
+#define list_is_tail(node) ((node)->next == NULL ? 1 : 0)
+
+#define list_data(node) ((node)->data)
+
+#define list_next(node) ((node)->next)
+
+#endif
